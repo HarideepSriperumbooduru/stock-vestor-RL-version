@@ -1,0 +1,10 @@
+gym
+pandas 
+numpy
+yfinance
+stockstats
+exchange_calendars
+pytz
+matplotlib
+pyfolio
+stable_baselines3
