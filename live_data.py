@@ -38,47 +38,62 @@ def test_model(model_name, MODELS, cwd, data_df, env_kwargs):
         f = open('mydata.json')
         status = json.load(f)
         env_kwargs["initial_amount"] = status['amount']
-        env_kwargs["num_stock_shares"] = status['stocks']
+        env_kwargs["num_stock_shares"] = [int(p) for p in status['stocks']]
 
     config.current_model_name = model_name
     model = load_model(model_name, MODELS, cwd)
     e_trade_gym = StockTradingEnv(df=data_df, turbulence_threshold=70, risk_indicator_col='vix', **env_kwargs)
-
+    print('amount before today is ', e_trade_gym.state[0])
     df_account_value, df_actions, step_status = DRLAgent.DRL_prediction(
         model=model,
         environment=e_trade_gym, status_bool=True)
 
+
     # print("current step status is ")
-    # print(step_status)
-    # action_history_df = pd.DataFrame.from_dict(step_status[0])
-    # action_history_df.to_csv('action_history_tuned.csv')
+    # print(step_status[0])
+    action_history_df = pd.DataFrame.from_dict(step_status[0])
+    file_exists = os.path.exists('action_history_live.csv')
+    if file_exists:
+        # df_live = pd.read_csv('action_history_live.csv')
+        # frames = [df_live, action_history_df]
+        # final_live_df = pd.concat(frames, ignore_index=True)
+        # final_live_df.to_csv("action_history_live.csv")
+        action_history_df.to_csv('action_history_live.csv', mode='a', index=False, header=False)
+    else:
+        action_history_df.to_csv("action_history_live.csv", index=False)
 
 
+    balance_left = list(action_history_df.balance.values)[-1]
+    print('final amount is ', balance_left)
 
-    # print("shape of the df_account value is ", df_account_value.shape)
+    action_history_df = action_history_df.sort_values(by='tic')
+    # print('sorted tics are')
+    # print(list(action_history_df.tic.values))
+    # print()
+    # print('sorted share numbers')
+    # print(list(action_history_df.total_num_shares.values))
+    # print()
 
-    print(df_account_value)
-    # print(df_actions)
+    stocks = list(action_history_df.total_num_shares.values)
 
-    stocks = e_trade_gym.state[(e_trade_gym.stock_dim + 1): (e_trade_gym.stock_dim * 2 + 1)]
-    amount = e_trade_gym.state[0]
+
     if 'stocks' not in status:
         status['stocks'] = None
-    status['stocks'] = [int(k) for k in stocks]
+    status['stocks'] = [str(k) for k in stocks]
     # if 'stocks_cool_down' not in status:
     #     status['stocks_cool_down'] = None
     # status['stocks_cool_down'] = [int(p) for p in env_instance.stocks_cool_down]
 
     if 'amount' not in status:
         status['amount'] = None
-    status['amount'] = amount
+    status['amount'] = balance_left
 
 
-    current_date = date.today()
-    current_date = current_date.strftime("%Y-%m-%d")
-    if current_date not in status:
-        status[current_date] = []
-    status[current_date].append(step_status)
+    # current_date = date.today()
+    # current_date = current_date.strftime("%Y-%m-%d")
+    # if current_date not in status:
+    #     status[current_date] = []
+    # status[current_date].append(step_status)
     # status.update(step_status)
 
     # print(status)
@@ -89,78 +104,13 @@ def test_model(model_name, MODELS, cwd, data_df, env_kwargs):
 
 
 
-
-
-
-def get_portfolio_state(price_array, tech_array, turbulence_array, split_array, model_name,cwd):
-    file_exists = os.path.exists('mydata.json')
-    if not file_exists:
-        status = {}
-
-        env_config = {
-            "price_array": price_array,
-            "tech_array": tech_array,
-            "turbulence_array": turbulence_array,
-            "split_val_array": split_array,
-            "if_train": False,
-        }
-        env_instance = StockTradingEnv(config_params=env_config)
-        config.current_model_name = model_name
-        cwd = cwd
-        episode_total_assets, step_status = DRLAgent_sb3.DRL_prediction_load_from_file(
-            model_name=model_name, environment=env_instance, cwd=cwd, status=status, status_bool=True
-        )
-
-    else:
-        f = open('mydata.json')
-        status = json.load(f)
-
-        env_config = {
-            "price_array": price_array,
-            "tech_array": tech_array,
-            "turbulence_array": turbulence_array,
-            "split_val_array": split_array,
-            "if_train": False,
-        }
-        env_instance = StockTradingEnv(config_params=env_config)
-        config.current_model_name = model_name
-        cwd = cwd
-        episode_total_assets, step_status = DRLAgent_sb3.DRL_prediction_load_from_file(
-            model_name=model_name, environment=env_instance, cwd=cwd, status=status, live=True, status_bool=True
-        )
-
-    if 'stocks' not in status:
-        status['stocks'] = None
-    status['stocks'] = [int(k) for k in env_instance.stocks]
-    if 'stocks_cool_down' not in status:
-        status['stocks_cool_down'] = None
-    status['stocks_cool_down'] = [int(p) for p in env_instance.stocks_cool_down]
-
-    if 'amount' not in status:
-        status['amount'] = None
-    status['amount'] = env_instance.amount
-
-
-    current_date = date.today()
-    current_date = current_date.strftime("%Y-%m-%d")
-    if current_date not in status:
-        status[current_date] = []
-    status[current_date].append(step_status)
-    # status.update(step_status)
-
-    print(status)
-    with open('mydata.json', 'w') as f:
-        json.dump(status, f)
-
-
-
 config.model_alive = True
 bse_calendar = tc.get_calendar("XBOM")
 today = date.today()
 
 # dd/mm/YY
 start = today.strftime("%Y-%m-%d")
-start = '2022-06-08'
+# start = '2022-06-08'
 start_d = "2020-06-07"
 if bse_calendar.is_session(start):
     last_working_date = bse_calendar.next_session(start)
@@ -219,7 +169,7 @@ if bse_calendar.is_session(start):
 
     buy_cost_list = sell_cost_list = [0.001] * stock_dimension
     num_stock_shares = [0] * stock_dimension
-    num_stock_shares = (np.array(num_stock_shares) + rd.randint(5, 30, size=np.array(num_stock_shares).shape)
+    num_stock_shares = (np.array(num_stock_shares) + rd.randint(10, 30, size=np.array(num_stock_shares).shape)
                         ).astype(np.int32)
     env_kwargs = {
         "hmax": 5,
