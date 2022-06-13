@@ -3,21 +3,13 @@ import os
 import pandas as pd
 import numpy as np
 from numpy import random as rd
-import matplotlib
-import matplotlib.pyplot as plt
-# matplotlib.use('Agg')
 import datetime
-
-
-from finrl.finrl_meta.preprocessor.yahoodownloader import YahooDownloader
 from finrl.finrl_meta.preprocessor.preprocessors import FeatureEngineer, data_split
 from finrl.finrl_meta.env_stock_trading.env_stocktrading import StockTradingEnv
 from finrl.drl_agents.stablebaselines3.models import DRLAgent
 from DataProcessor import DataProcessor
 from stable_baselines3 import A2C, DDPG, PPO, SAC, TD3
 from finrl.plot import backtest_stats, backtest_plot, get_daily_return, get_baseline
-from pprint import pprint
-
 import sys
 sys.path.append("../FinRL-Library")
 import config
@@ -39,7 +31,6 @@ def download_initial_dataset():
                                 end_date=config.TEST_END_DATE,
                                 ticker_list=config.TICKERS_LIST,
                                 time_interval='1d')
-        # df.sort_values(['date', 'tic'], ignore_index=True).head()
         fe = FeatureEngineer(
             use_technical_indicator=True,
             tech_indicator_list=config.TECHNICAL_INDICATORS_LIST,
@@ -50,16 +41,13 @@ def download_initial_dataset():
         list_ticker = processed["tic"].unique().tolist()
         list_date = list(pd.date_range(processed['date'].min(), processed['date'].max()).astype(str))
         combination = list(itertools.product(list_date, list_ticker))
-
         processed_full = pd.DataFrame(combination, columns=["date", "tic"]).merge(processed, on=["date", "tic"], how="left")
         processed_full = processed_full[processed_full['date'].isin(processed['date'])]
         processed_full = processed_full.sort_values(['date', 'tic'])
 
         processed_full = processed_full.fillna(0)
         # processed_full = DP.add_stock_split(processed_full)
-
         try:
-
             processed_full.to_csv('processed_full.csv')
         except:
             pass
@@ -85,11 +73,8 @@ def load_model(model_name, MODELS, cwd):
 def set_model(model_name, params,total_timesteps, train_df, env_kwargs):
 
     e_train_gym = StockTradingEnv(df=train_df, **env_kwargs)
-
     env_train, _ = e_train_gym.get_sb_env()
     agent = DRLAgent(env=env_train)
-
-
     to_be_trained_model = agent.get_model(model_name, model_kwargs=params)
     trained_model = agent.train_model(model=to_be_trained_model,
                                     tb_log_name=model_name,
@@ -100,14 +85,11 @@ def test_model(model_name, MODELS, cwd, data_df, env_kwargs):
     config.current_model_name = model_name
     model = load_model(model_name, MODELS, cwd)
     e_trade_gym = StockTradingEnv(df=data_df, turbulence_threshold=70, risk_indicator_col='vix', **env_kwargs)
-
     df_account_value, df_actions = DRLAgent.DRL_prediction(
         model=model,
         environment=e_trade_gym)
-
     if config.comments_bool:
         print("shape of the df_account value is ", df_account_value.shape)
-
         print(df_account_value.tail())
         print(df_actions.head())
     try:
@@ -115,7 +97,6 @@ def test_model(model_name, MODELS, cwd, data_df, env_kwargs):
         df_account_value.to_csv(f"./saved_results/account_history_{model_name}.csv")
     except:
         pass
-
 
 def backtest_model(df_account_value):
     print("==============Get Backtest Results===========")
@@ -136,9 +117,6 @@ def backtest_model(df_account_value):
 
     print("==============Compare to DJIA===========")
 
-    # S&P 500: ^GSPC
-    # Dow Jones Index: ^DJI
-    # NASDAQ 100: ^NDX
     backtest_plot(df_account_value,
                   baseline_ticker='^NSEI',
                   baseline_start=df_account_value.loc[0, 'date'],
@@ -178,27 +156,6 @@ def main():
 
     if config.training_phase:
         print("in training phase")
-        # e_train_gym = StockTradingEnv(df=train, **env_kwargs)
-        #
-        # env_train, _ = e_train_gym.get_sb_env()
-        # agent = DRLAgent(env = env_train)
-        # SAC_PARAMS = {
-        #     "batch_size": 128,
-        #     "buffer_size": 1000000,
-        #     "learning_rate": 0.0001,
-        #     "learning_starts": 100,
-        #     "ent_coef": "auto_0.1",
-        # }
-        #
-        # model_sac = agent.get_model("sac", model_kwargs=SAC_PARAMS)
-        # trained_sac = agent.train_model(model=model_sac,
-        #                              tb_log_name='sac',
-        #                              total_timesteps=100000)
-
-
-
-
-        # uncomment later
 
         set_model(
             model_name='sac',
@@ -255,18 +212,6 @@ def main():
         }
         config.txn_date_lst = trade['date']
         print("in validating phase")
-        # model = load_model('sac', MODELS, './trained_models/SAC_full_data.zip')
-        # e_trade_gym = StockTradingEnv(df=trade, turbulence_threshold=70, risk_indicator_col='vix', **env_kwargs)
-        #
-        # df_account_value, df_actions = DRLAgent.DRL_prediction(
-        #     model=model,
-        #     environment=e_trade_gym)
-        #
-        # print("shape of the df_account value is ", df_account_value.shape)
-        #
-        # print(df_account_value.tail())
-        # print(df_actions.head())
-
         test_model(
             model_name='sac',
             MODELS=MODELS,
