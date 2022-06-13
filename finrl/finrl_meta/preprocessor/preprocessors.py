@@ -80,29 +80,29 @@ class FeatureEngineer:
         """
         # clean data
         df = self.clean_data(df)
-        print("data after cleaned is ")
-        print(df)
+        # print("data after cleaned is ")
+        # print(df)
         # add technical indicators using stockstats
         if self.use_technical_indicator:
             df = self.add_technical_indicator(df)
             print("Successfully added technical indicators")
-        print()
-        print("data after adding tech indicators")
-        print(df)
+        # print()
+        # print("data after adding tech indicators")
+        # print(df)
         # add vix for multiple stock
         if self.use_vix:
             df = self.add_vix(df)
             print("Successfully added vix")
-        print()
-        print("data after adding vix")
-        print(df)
+        # print()
+        # print("data after adding vix")
+        # print(df)
         # add turbulence index for multiple stock
         if self.use_turbulence:
             df = self.add_turbulence(df)
             print("Successfully added turbulence index")
-        print()
-        print("data after adding turbulence")
-        print(df)
+        # print()
+        # print("data after adding turbulence")
+        # print(df)
 
         # add user defined feature
         if self.user_defined_feature:
@@ -234,7 +234,7 @@ class FeatureEngineer:
         """calculate turbulence index based on dow 30"""
         # can add other market assets
         df = data.copy()
-        print("df is ", df)
+        # print("df is ", df)
         df_price_pivot = df.pivot(index="date", columns="tic", values="close")
         print("price pivot index")
         print(df_price_pivot.index)
