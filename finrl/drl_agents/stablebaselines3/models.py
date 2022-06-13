@@ -13,7 +13,7 @@ from stable_baselines3.common.noise import (
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 import config
-
+import os
 
 MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
 
@@ -133,9 +133,11 @@ class DRLAgent:
             # print()
             # print()
             if config.model_alive:
-
+                if 'terminal_observation' in info[0]:
+                    info[0].pop('terminal_observation')
                 df = pd.DataFrame(info[0])
-                df.to_csv("day_status.csv")
+                df.to_csv("day_status.csv", index=False)
+
 
 
             count += 1
