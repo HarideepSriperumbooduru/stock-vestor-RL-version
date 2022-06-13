@@ -59,6 +59,7 @@ class StockTradingEnv(gym.Env):
         )
 
         self.data = self.df.loc[self.day, :]
+        self.data = self.data.sort_values(by='tic')
 
         self.terminal = False
         self.make_plots = make_plots
@@ -126,22 +127,22 @@ class StockTradingEnv(gym.Env):
 
             if self.state[index + self.stock_dim + 1] > 0:
                 if not config.training_phase:
-                    if not config.model_alive:
-                        amount_with_avg_price = self.avg_price_array[index] * sell_num_shares
-                        total_asset_val = self.state[0] + sum(
-                            np.array(self.state[1: (self.stock_dim + 1)])
-                            * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
-                        )
-                        self.populate_action_history(self.date_memory[-1], self.data.tic.values[index],
-                                                     config.sector[self.data.tic.values[index]], round(self.state[index + 1], 2),
-                                                     self.avg_price_array[index], config.current_model_name, 'sell',
-                                                     sell_num_shares, round(sell_amount, 2),
-                                                     round(self.state[0], 2), round(total_asset_val, 2),
-                                                     round((sell_amount - amount_with_avg_price), 2),
-                                                     round((total_asset_val - config.previous_total_asset_val), 2),
-                                                     self.state[index + self.stock_dim + 1])
+                    # if not config.model_alive:
+                    amount_with_avg_price = self.avg_price_array[index] * sell_num_shares
+                    total_asset_val = self.state[0] + sum(
+                        np.array(self.state[1: (self.stock_dim + 1)])
+                        * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
+                    )
+                    self.populate_action_history(self.date_memory[-1], self.data.tic.values[index],
+                                                 config.sector[self.data.tic.values[index]], round(self.state[index + 1], 2),
+                                                 self.avg_price_array[index], config.current_model_name, 'sell',
+                                                 sell_num_shares, round(sell_amount, 2),
+                                                 round(self.state[0], 2), round(total_asset_val, 2),
+                                                 round((sell_amount - amount_with_avg_price), 2),
+                                                 round((total_asset_val - config.previous_total_asset_val), 2),
+                                                 self.state[index + self.stock_dim + 1])
 
-                        config.previous_total_asset_val = total_asset_val
+                    config.previous_total_asset_val = total_asset_val
 
             if config.model_alive:
                 if 'date' not in step_status:
@@ -162,6 +163,12 @@ class StockTradingEnv(gym.Env):
                 if 'price' not in step_status:
                     step_status['price'] = []
                 step_status['price'].append(str(round(self.state[index + 1], 2)))
+                if 'total_num_shares' not in step_status:
+                    step_status['total_num_shares'] = []
+                step_status['total_num_shares'].append(self.state[index + self.stock_dim + 1])
+                if 'balance' not in step_status:
+                    step_status['balance'] = []
+                step_status['balance'].append(str(round(self.state[0], 2)))
 
             return sell_num_shares
 
@@ -225,30 +232,30 @@ class StockTradingEnv(gym.Env):
                 buy_num_shares = 0
 
             if not config.training_phase:
-                if not config.model_alive:
-                    existing_shares = (self.state[index + self.stock_dim + 1] - buy_num_shares)
-                    if self.state[index + 1] and buy_num_shares and self.avg_price_array[index] and existing_shares:
-                        if buy_num_shares > 0 or existing_shares > 0:
-                            wt_avg_price_buy = self.weighted_avg(self.state[index + 1], buy_num_shares,
-                                                                 self.avg_price_array[index],
-                                                                 existing_shares)
-                            self.avg_price_array[index] = wt_avg_price_buy
-                    # amount_with_avg_price = self.avg_price_array[index] * buy_num_shares
-                    total_asset_val = self.state[0] + sum(
-                        np.array(self.state[1: (self.stock_dim + 1)])
-                        * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
-                    )
-                    self.populate_action_history(self.date_memory[-1], self.data.tic.values[index],
-                                                 config.sector[self.data.tic.values[index]],
-                                                 round(self.state[index + 1], 2),
-                                                 self.avg_price_array[index], config.current_model_name, 'buy',
-                                                 buy_num_shares, round(buy_amount, 2),
-                                                 round(self.state[0], 2), round(total_asset_val, 2),
-                                                 0,
-                                                 round((total_asset_val - config.previous_total_asset_val), 2),
-                                                 self.state[index + self.stock_dim + 1])
+                # if not config.model_alive:
+                existing_shares = (self.state[index + self.stock_dim + 1] - buy_num_shares)
+                if self.state[index + 1] and buy_num_shares and self.avg_price_array[index] and existing_shares:
+                    if buy_num_shares > 0 or existing_shares > 0:
+                        wt_avg_price_buy = self.weighted_avg(self.state[index + 1], buy_num_shares,
+                                                             self.avg_price_array[index],
+                                                             existing_shares)
+                        self.avg_price_array[index] = wt_avg_price_buy
+                # amount_with_avg_price = self.avg_price_array[index] * buy_num_shares
+                total_asset_val = self.state[0] + sum(
+                    np.array(self.state[1: (self.stock_dim + 1)])
+                    * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
+                )
+                self.populate_action_history(self.date_memory[-1], self.data.tic.values[index],
+                                             config.sector[self.data.tic.values[index]],
+                                             round(self.state[index + 1], 2),
+                                             self.avg_price_array[index], config.current_model_name, 'buy',
+                                             buy_num_shares, round(buy_amount, 2),
+                                             round(self.state[0], 2), round(total_asset_val, 2),
+                                             0,
+                                             round((total_asset_val - config.previous_total_asset_val), 2),
+                                             self.state[index + self.stock_dim + 1])
 
-                    config.previous_total_asset_val = total_asset_val
+                config.previous_total_asset_val = total_asset_val
 
             if config.model_alive:
                 if 'date' not in step_status:
@@ -264,11 +271,17 @@ class StockTradingEnv(gym.Env):
 
                 if 'num_of_shares' not in step_status:
                     step_status['num_of_shares'] = []
-                step_status['num_of_shares'].append(str(buy_num_shares))
+                step_status['num_of_shares'].append(buy_num_shares)
 
                 if 'price' not in step_status:
                     step_status['price'] = []
-                step_status['price'].append(str(round(self.state[index + 1], 2)))
+                step_status['price'].append(round(self.state[index + 1], 2))
+                if 'total_num_shares' not in step_status:
+                    step_status['total_num_shares'] = []
+                step_status['total_num_shares'].append(self.state[index + self.stock_dim + 1])
+                if 'balance' not in step_status:
+                    step_status['balance'] = []
+                step_status['balance'].append(round(self.state[0], 2))
             return buy_num_shares
 
         # perform buy action based on the sign of the action
@@ -417,6 +430,9 @@ class StockTradingEnv(gym.Env):
                 self.day += 1
 
             self.data = self.df.loc[self.day, :]
+            self.data = self.data.sort_values(by='tic')
+            # print('printing the tics order')
+            # print(list(self.data.tic.values))
             if self.turbulence_threshold is not None:
                 if len(self.df.tic.unique()) == 1:
                     self.turbulence = self.data[self.risk_indicator_col]
@@ -461,6 +477,7 @@ class StockTradingEnv(gym.Env):
         self.day = 0
 
         self.data = self.df.loc[self.day, :]
+        self.data = self.data.sort_values(by='tic')
         self.turbulence = 0
         self.cost = 0
         self.trades = 0
