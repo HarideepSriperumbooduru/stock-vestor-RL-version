@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from typing import List
 matplotlib.use("Agg")
 import config
-# from stable_baselines3.common.logger import Logger, KVWriter, CSVOutputFormat
+
 
 
 class StockTradingEnv(gym.Env):
@@ -207,32 +207,22 @@ class StockTradingEnv(gym.Env):
     def _buy_stock(self, index, action, step_status):
         def _do_buy():
             if self.state[index + 2*self.stock_dim+ 1] !=True: # check if the stock is able to buy
-            # if self.state[index + 1] >0:
-                # Buy only if the price is > 0 (no missing data in this particular date)
+
                 available_amount = int(self.state[0] / (self.state[index + 1]*(1 + self.buy_cost_pct[index])) )# when buying stocks, we should consider the cost of trading when calculating available_amount, or we may be have cash<0
-                # print('available_amount:{}'.format(available_amount))
 
                 # update balance
-                total_asset_val_before_action = self.state[0] + sum(
-                    np.array(self.state[1: (self.stock_dim + 1)])
-                    * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
-                )
-
                 buy_num_shares = min(available_amount, action)
                 buy_amount = (
                     self.state[index + 1] * buy_num_shares * (1 + self.buy_cost_pct[index])
                 )
                 self.state[0] -= buy_amount
-
                 self.state[index + self.stock_dim + 1] += buy_num_shares
-
                 self.cost += self.state[index + 1] * buy_num_shares * self.buy_cost_pct[index]
                 self.trades += 1
             else:
                 buy_num_shares = 0
 
             if not config.training_phase:
-                # if not config.model_alive:
                 existing_shares = (self.state[index + self.stock_dim + 1] - buy_num_shares)
                 if self.state[index + 1] and buy_num_shares and self.avg_price_array[index] and existing_shares:
                     if buy_num_shares > 0 or existing_shares > 0:
@@ -240,7 +230,6 @@ class StockTradingEnv(gym.Env):
                                                              self.avg_price_array[index],
                                                              existing_shares)
                         self.avg_price_array[index] = wt_avg_price_buy
-                # amount_with_avg_price = self.avg_price_array[index] * buy_num_shares
                 total_asset_val = self.state[0] + sum(
                     np.array(self.state[1: (self.stock_dim + 1)])
                     * np.array(self.state[(self.stock_dim + 1): (self.stock_dim * 2 + 1)])
@@ -380,23 +369,14 @@ class StockTradingEnv(gym.Env):
                 )
                 plt.close()
 
-            # Add outputs to logger interface
-            # logger.record("environment/portfolio_value", end_total_asset)
-            # logger.record("environment/total_reward", tot_reward)
-            # logger.record("environment/total_reward_pct", (tot_reward / (end_total_asset - tot_reward)) * 100)
-            # logger.record("environment/total_cost", self.cost)
-            # logger.record("environment/total_trades", self.trades)
-
             return self.state, self.reward, self.terminal, {}
 
         else:
-            # print("entered step")
             actions = actions * self.hmax  # actions initially is scaled between 0 to 1
             actions = actions.astype(
                 int
             )  # convert into integer because we can't by fraction of shares
-            # print("********************************")
-            # print(actions)
+
             if self.turbulence_threshold is not None:
                 if self.turbulence >= self.turbulence_threshold:
                     actions = np.array([-self.hmax] * self.stock_dim)
@@ -404,23 +384,15 @@ class StockTradingEnv(gym.Env):
                 np.array(self.state[1 : (self.stock_dim + 1)])
                 * np.array(self.state[(self.stock_dim + 1) : (self.stock_dim * 2 + 1)])
             )
-            # print("begin_total_asset:{}".format(begin_total_asset))
 
             argsort_actions = np.argsort(actions)
             sell_index = argsort_actions[: np.where(actions < 0)[0].shape[0]]
             buy_index = argsort_actions[::-1][: np.where(actions > 0)[0].shape[0]]
 
             for index in sell_index:
-                # print(f"Num shares before: {self.state[index+self.stock_dim+1]}")
-                # print(f'take sell action before : {actions[index]}')
                 actions[index] = self._sell_stock(index, actions[index], step_status) * -1
 
-                # actions[index] = -1 * sell_shares_count
-                # print(f'take sell action after : {actions[index]}')
-                # print(f"Num shares after: {self.state[index+self.stock_dim+1]}")
-
             for index in buy_index:
-                # print('take buy action: {}'.format(actions[index]))
                 actions[index] = self._buy_stock(index, actions[index], step_status)
 
             self.actions_memory.append(actions)
@@ -431,8 +403,7 @@ class StockTradingEnv(gym.Env):
 
             self.data = self.df.loc[self.day, :]
             self.data = self.data.sort_values(by='tic')
-            # print('printing the tics order')
-            # print(list(self.data.tic.values))
+
             if self.turbulence_threshold is not None:
                 if len(self.df.tic.unique()) == 1:
                     self.turbulence = self.data[self.risk_indicator_col]
@@ -444,15 +415,11 @@ class StockTradingEnv(gym.Env):
                 np.array(self.state[1 : (self.stock_dim + 1)])
                 * np.array(self.state[(self.stock_dim + 1) : (self.stock_dim * 2 + 1)])
             )
-            # print('getting the todays date ', self._get_date())
+
             self.asset_memory.append(end_total_asset)
             self.date_memory.append(self._get_date())
-            # print("new length of date memory is ", len(self.date_memory))
             self.reward = end_total_asset - begin_total_asset
-            # print("reward at the end is ", self.reward)
             self.rewards_memory.append(self.reward)
-            # actn_lst = actions + [self.reward]
-            # self.actions_memory.append(actn_lst)
             self.reward = self.reward * self.reward_scaling
             self.state_memory.append(self.state) # add current state in state_recorder for each step
 
@@ -526,7 +493,6 @@ class StockTradingEnv(gym.Env):
             # Using Previous State
             if len(self.df.tic.unique()) > 1:
                 # for multiple stock
-                # self.avg_price_array = self.data.close.values.tolist()
                 state = (
                     [self.previous_state[0]]
                     + self.data.close.values.tolist()
@@ -543,7 +509,6 @@ class StockTradingEnv(gym.Env):
                 )
             else:
                 # for single stock
-                # self.avg_price_array = self.data.close.values.tolist()
                 state = (
                     [self.previous_state[0]]
                     + [self.data.close]
@@ -557,7 +522,6 @@ class StockTradingEnv(gym.Env):
     def _update_state(self):
         if len(self.df.tic.unique()) > 1:
             # for multiple stock
-            # self.avg_price_array = self.data.close.values.tolist()
             state = (
                 [self.state[0]]
                 + self.data.close.values.tolist()
@@ -573,7 +537,6 @@ class StockTradingEnv(gym.Env):
 
         else:
             # for single stock
-            # self.avg_price_array = self.data.close.values.tolist()
             state = (
                 [self.state[0]]
                 + [self.data.close]
@@ -601,12 +564,11 @@ class StockTradingEnv(gym.Env):
             state_list = self.state_memory
             df_states = pd.DataFrame(state_list,columns=['cash','Bitcoin_price','Gold_price','Bitcoin_num','Gold_num','Bitcoin_Disable','Gold_Disable'])
             df_states.index = df_date.date
-            # df_actions = pd.DataFrame({'date':date_list,'actions':action_list})
+
         else:
             date_list = self.date_memory[:-1]
             state_list = self.state_memory
             df_states = pd.DataFrame({"date": date_list, "states": state_list})
-        # print(df_states)
         return df_states
 
     def save_asset_memory(self):
@@ -628,24 +590,13 @@ class StockTradingEnv(gym.Env):
                 date_list = [self.date_memory[:-1]]
             else:
                 date_list = self.date_memory[:-1]
-            # print("date list is  ", date_list)
             df_date = pd.DataFrame(date_list)
-            # print("last date from memory ", df_date.shape, "  ", df_date)
             df_date.columns = ["date"]
-
             action_list = self.actions_memory
-
-            print("****************************")
-            # print('type of action list is ', len(action_list))
-            print('length of action list is ', len(action_list))
-            print('action list item ', action_list)
             df_actions = pd.DataFrame(action_list)
-            # cols = self.data.tic.values + ['return_val']
-            print(self.data.tic.values)
             df_actions.columns = self.data.tic.values
             df_actions['return_val'] = self.rewards_memory
             df_actions.index = df_date.date
-            # df_actions = pd.DataFrame({'date':date_list,'actions':action_list})
         else:
             if config.model_alive:
                 date_list = [self.date_memory[:-1]]
