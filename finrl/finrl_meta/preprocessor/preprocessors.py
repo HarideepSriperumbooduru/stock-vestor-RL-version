@@ -5,7 +5,7 @@ import pandas as pd
 import config
 from finrl.finrl_meta.preprocessor.yahoodownloader import YahooDownloader
 from stockstats import StockDataFrame as Sdf
-
+import exchange_calendars as tc
 
 def load_dataset(*, file_name: str) -> pd.DataFrame:
     """
@@ -162,9 +162,11 @@ class FeatureEngineer:
                     temp_indicator["date"] = df[df.tic == unique_ticker[i]][
                         "date"
                     ].to_list()
-                    indicator_df = indicator_df.append(
-                        temp_indicator, ignore_index=True
-                    )
+                    frames = [indicator_df, temp_indicator]
+                    # indicator_df = indicator_df.append(
+                    #     temp_indicator, ignore_index=True
+                    # )
+                    indicator_df = pd.concat(frames, ignore_index=True)
                 except Exception as e:
                     print(e)
             df = df.merge(
@@ -196,11 +198,14 @@ class FeatureEngineer:
         :param data: (df) pandas dataframe
         :return: (df) pandas dataframe
         """
+
         df = data.copy()
         last_date = df.date.max()
         if config.model_alive:
+            bse_calendar = tc.get_calendar("XBOM")
             d = datetime.datetime.today()
-            last_date = d + datetime.timedelta(days=1)
+            current_date = d.strftime("%Y-%m-%d")
+            last_date = bse_calendar.next_session(current_date)
             last_date = last_date.strftime("%Y-%m-%d")
         print("last day is ", last_date)
         df_vix = YahooDownloader(
