@@ -115,31 +115,19 @@ class DRLAgent:
         #         state_memory=[] #add memory pool to store states
         test_env.reset()
         count = 0
-        # print("essential variable ", len(environment.df.index.unique()))
+
         for i in range(len(environment.df.index.unique())):
             action, _states = model.predict(test_obs, deterministic=deterministic)
-            # account_memory = test_env.env_method(method_name="save_asset_memory")
-            # actions_memory = test_env.env_method(method_name="save_action_memory")
-            # print("entering the step from model,py")
             if config.model_alive:
                 test_obs, rewards, dones, info = test_env.step(action)
             else:
                 test_obs, rewards, dones, info = test_env.step(action)
 
-
-            # print()
-            # print("actual action history look out")
-            # print(info)
-            # print()
-            # print()
             if config.model_alive:
                 if 'terminal_observation' in info[0]:
                     info[0].pop('terminal_observation')
                 df = pd.DataFrame(info[0])
                 df.to_csv("day_status.csv", index=False)
-
-
-
             count += 1
             if not config.model_alive:
                 if i == (len(environment.df.index.unique()) - 2):
@@ -147,7 +135,6 @@ class DRLAgent:
                     account_memory = account_memory[0]
                     actions_memory = test_env.env_method(method_name="save_action_memory")
                     actions_memory = actions_memory[0]
-                #   state_memory=test_env.env_method(method_name="save_state_memory") # add current state to state memory
 
             else:
                 if i == (len(environment.df.index.unique()) - 2):
